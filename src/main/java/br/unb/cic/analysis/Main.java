@@ -296,20 +296,21 @@ public class Main {
         overrideAssignment.configureEntryPoints();
 
         PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", overrideAssignment));
+        System.out.println("Depth limit: "+overrideAssignment.getDepthLimit());
 
         saveExecutionTime("Configure Soot OA " + (interprocedural ? "Inter" : "Intra"));
 
         SootWrapper.applyPackages();
 
         conflicts.addAll(overrideAssignment.getConflicts().stream().map(c -> c.toString()).collect(Collectors.toList()));
-        saveExecutionTime("Time to perform OA" + (interprocedural ? "Inter" : "Intra"));
+        saveExecutionTime("Time to perform OA " + (interprocedural ? "Inter" : "Intra"));
 
         int visitedMethods = overrideAssignment.getVisitedMethodsCount();
-        System.out.println("OA" + (interprocedural ? "Inter" : "Intra") + "Visited methods: " + visitedMethods);
+        System.out.println("OA " + (interprocedural ? "Inter" : "Intra") + " Visited methods: " + visitedMethods);
 
-        saveVisitedMethods("OA" + (interprocedural ? "Inter" : "Intra"), (visitedMethods + ""));
+        saveVisitedMethods("OA " + (interprocedural ? "Inter" : "Intra"), (visitedMethods + ""));
 
-        saveConflictsLog("OA" + (interprocedural ? "Inter" : "Intra"), conflicts.toString());
+        saveConflictsLog("OA " + (interprocedural ? "Inter" : "Intra"), conflicts.toString());
 
     }
 
