@@ -9,6 +9,7 @@ import soot.PackManager;
 import soot.SootMethod;
 import soot.Unit;
 
+import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -67,12 +68,7 @@ public abstract class DFPAnalysisSemanticConflicts extends JDFP {
 
     @Override
     public final scala.collection.immutable.List<String> applicationClassPath() {
-        String[] array = new String[100];
-        if (cp.contains(":/") || cp.contains(":\\")){ // Windows class path error
-            array[0] = cp.toString();
-        }else{
-            array = cp.split(":");
-        }
+        String[] array = cp.split(File.pathSeparator);
         return JavaConverters.asScalaBuffer(Arrays.asList(array)).toList();
     }
 

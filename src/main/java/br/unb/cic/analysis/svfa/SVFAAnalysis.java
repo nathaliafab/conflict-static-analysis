@@ -7,6 +7,8 @@ import br.unb.cic.soot.svfa.jimple.JSVFA;
 import scala.collection.JavaConverters;
 import soot.SootMethod;
 import soot.Unit;
+
+import java.io.File;
 import java.util.*;
 
 /**
@@ -57,7 +59,7 @@ public abstract class SVFAAnalysis extends JSVFA {
 
     @Override
     public final scala.collection.immutable.List<String> applicationClassPath() {
-        String[] array = cp.split(":");
+        String[] array = cp.split(File.pathSeparator);
         return JavaConverters.asScalaBuffer(Arrays.asList(array)).toList();
     }
 

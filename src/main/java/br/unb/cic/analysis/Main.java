@@ -2,17 +2,20 @@ package br.unb.cic.analysis;
 
 import br.unb.cic.analysis.cd.CDAnalysisSemanticConflicts;
 import br.unb.cic.analysis.cd.CDIntraProcedural;
-import br.unb.cic.analysis.df.*;
+import br.unb.cic.analysis.df.ConfluentAnalysis;
+import br.unb.cic.analysis.df.ConfluentTaintedAnalysis;
+import br.unb.cic.analysis.df.ReachDefinitionAnalysis;
+import br.unb.cic.analysis.df.TaintedAnalysis;
 import br.unb.cic.analysis.df.pessimistic.PessimisticTaintedAnalysis;
 import br.unb.cic.analysis.dfp.DFPAnalysisSemanticConflicts;
 import br.unb.cic.analysis.dfp.DFPInterProcedural;
 import br.unb.cic.analysis.dfp.DFPIntraProcedural;
 import br.unb.cic.analysis.io.DefaultReader;
 import br.unb.cic.analysis.io.MergeConflictReader;
-import br.unb.cic.analysis.ioa.InterproceduralOverrideAssignment;
 import br.unb.cic.analysis.model.Conflict;
 import br.unb.cic.analysis.model.Statement;
 import br.unb.cic.analysis.model.TraversedLine;
+import br.unb.cic.analysis.oa.OverrideAssignment;
 import br.unb.cic.analysis.pdg.PDGAnalysisSemanticConflicts;
 import br.unb.cic.analysis.pdg.PDGIntraProcedural;
 import br.unb.cic.analysis.reachability.ReachabilityAnalysis;
@@ -190,7 +193,10 @@ public class Main {
                 runReachabilityAnalysis(classpath);
                 break;
             case "overriding-interprocedural":
-                runInterproceduralOverrideAssignmentAnalysis(classpath);
+                runOverrideAssignmentAnalysis(classpath, true);
+                break;
+            case "overriding-intraprocedural":
+                runOverrideAssignmentAnalysis(classpath, false);
                 break;
             case "dfp-intra":
                 runDFPAnalysis(classpath, false);
@@ -259,9 +265,6 @@ public class Main {
                             case "confluence-tainted":
                                 analysis = new ConfluentTaintedAnalysis(body, definition);
                                 break;
-                            case "overriding-intraprocedural":
-                                analysis = new OverridingAssignmentAnalysis(body, definition);
-                                break;
                             default: {
                                 System.out.println("Error: " + "invalid mode " + mode);
                                 System.exit(-1);
@@ -279,35 +282,37 @@ public class Main {
         }
     }
 
-    private void runInterproceduralOverrideAssignmentAnalysis(String classpath) {
+    private void runOverrideAssignmentAnalysis(String classpath, Boolean interprocedural) {
         int depthLimit = Integer.parseInt(cmd.getOptionValue("depthLimit", "5"));
 
         stopwatch = Stopwatch.createStarted();
 
-        InterproceduralOverrideAssignment interproceduralOverrideAssignment =
-                new InterproceduralOverrideAssignment(definition, depthLimit);
+        OverrideAssignment overrideAssignment =
+                new OverrideAssignment(definition, depthLimit, interprocedural);
 
         List<String> classes = Collections.singletonList(classpath);
         SootWrapper.configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis(classes);
 
-        interproceduralOverrideAssignment.configureEntryPoints();
+        overrideAssignment.configureEntryPoints();
 
-        PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", interproceduralOverrideAssignment));
-        System.out.println("Depth limit: "+interproceduralOverrideAssignment.getDepthLimit());
-        saveExecutionTime("Configure Soot OA Inter");
+        PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", overrideAssignment));
+
+        saveExecutionTime("Configure Soot OA " + (interprocedural ? "Inter" : "Intra"));
 
         SootWrapper.applyPackages();
 
-        conflicts.addAll(interproceduralOverrideAssignment.getConflicts().stream().map(c -> c.toString()).collect(Collectors.toList()));
-        saveExecutionTime("Time to perform OA Inter");
+        conflicts.addAll(overrideAssignment.getConflicts().stream().map(c -> c.toString()).collect(Collectors.toList()));
+        saveExecutionTime("Time to perform OA" + (interprocedural ? "Inter" : "Intra"));
 
-        System.out.println("Visited methods: "+ interproceduralOverrideAssignment.getVisitedMethods());
+        int visitedMethods = overrideAssignment.getVisitedMethodsCount();
+        System.out.println("OA" + (interprocedural ? "Inter" : "Intra") + "Visited methods: " + visitedMethods);
 
-        saveVisitedMethods("OA Inter", (interproceduralOverrideAssignment.getVisitedMethods()+""));
+        saveVisitedMethods("OA" + (interprocedural ? "Inter" : "Intra"), (visitedMethods + ""));
 
-        saveConflictsLog("OA Inter", conflicts.toString());
+        saveConflictsLog("OA" + (interprocedural ? "Inter" : "Intra"), conflicts.toString());
 
     }
+
 
     /*
      * After discussing this algorithm with the researchers at
