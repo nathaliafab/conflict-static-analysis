@@ -18,7 +18,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class OverrideAssignment extends SceneTransformer implements AbstractAnalysis {
-    private final int depthLimit;
+    private int depthLimit;
     private final Boolean interprocedural;
     private final AbstractMergeConflictDefinition definition;
     private OAConflictReport oaConflictReport;
@@ -489,5 +489,13 @@ public class OverrideAssignment extends SceneTransformer implements AbstractAnal
 
     public int getVisitedMethodsCount() {
         return this.traversedMethodsWrapper.getVisitedMethodsCount();
+    }
+
+    public int getDepthLimit() {
+        return depthLimit;
+    }
+
+    public void setDepthLimit(int depthLimit) {
+        this.depthLimit = depthLimit;
     }
 }

@@ -46,7 +46,7 @@ Access the miningframework project folder
 
 To run the experiment, use the following commands:
 
-`chmod +x scripts/run_experiment.sh && ./scripts/run_experiment.sh <n>`
+`chmod +x scripts/run_static_analyses_experiment.sh && ./scripts/run_static_analyses_experiment.sh <n>`
 
 You can pass the number (n) of times as an argument, the default is ten.
 
