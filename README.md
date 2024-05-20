@@ -56,10 +56,10 @@ Create a file called settings.xml in /home/.m2 and insert your GIT_HUB_USER and 
           <name>spgroup</name>
           <url>https://maven.pkg.github.com/spgroup/soot</url>
         </repository>
-	<repository>
+        <repository>
           <id>svfa</id>
           <name>svfa repository</name>
-          <url>https://maven.pkg.github.com/rbonifacio/svfa-scala</url>
+          <url>https://maven.pkg.github.com/spgroup/svfa-scala</url>
         </repository>
 
       </repositories>
