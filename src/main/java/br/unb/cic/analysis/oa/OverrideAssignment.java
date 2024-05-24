@@ -124,7 +124,7 @@ public class OverrideAssignment extends SceneTransformer implements AbstractAnal
 
         this.traversedMethodsWrapper.add(sootMethod);
 
-        System.out.println(sootMethod + " - " + this.traversedMethodsWrapper.size());
+        //System.out.println(sootMethod + " - " + this.traversedMethodsWrapper.size());
         Body body = definition.retrieveActiveBodySafely(sootMethod);
 
         if (body != null) {
