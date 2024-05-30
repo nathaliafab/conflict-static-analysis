@@ -4,13 +4,9 @@ import br.unb.cic.analysis.AbstractMergeConflictDefinition;
 import br.unb.cic.analysis.Main;
 import br.unb.cic.analysis.dfp.DFPAnalysisSemanticConflicts;
 import br.unb.cic.analysis.model.Statement;
-import br.unb.cic.analysis.model.TraversedLine;
 import br.unb.cic.soot.graph.StatementNode;
-import ch.qos.logback.core.net.SyslogOutputStream;
 import com.google.common.base.Stopwatch;
-import soot.AbstractSootFieldRef;
 import soot.G;
-import soot.Scene;
 import soot.Unit;
 import soot.options.Options;
 
@@ -23,8 +19,9 @@ public class DFPConfluenceAnalysis {
     private AbstractMergeConflictDefinition definition;
     private Set<ConfluenceConflict> confluentFlows = new HashSet<>();
     private int depthLimit;
-    private String getGraphSize;
 
+    private List<String> entrypoints;
+    private String getGraphSize;
     private int visitedMethods;
 
     public DFPConfluenceAnalysis(String classPath, AbstractMergeConflictDefinition definition, boolean interprocedural) {
@@ -41,8 +38,17 @@ public class DFPConfluenceAnalysis {
         this.depthLimit = depthLimit;
     }
 
+    public DFPConfluenceAnalysis(String classPath, AbstractMergeConflictDefinition definition, boolean interprocedural, int depthLimit, List<String> entrypoints) {
+        this.cp = classPath;
+        this.definition = definition;
+        this.interprocedural = interprocedural;
+        this.depthLimit = depthLimit;
+        this.entrypoints = entrypoints;
+    }
+
     /**
      * After the execute method has been called, it returns the confluent conflicts returned by the algorithm
+     *
      * @return a set of confluence conflicts
      */
     public Set<ConfluenceConflict> getConfluentConflicts() {
@@ -199,7 +205,7 @@ public class DFPConfluenceAnalysis {
      * @return A instance of a child class of the JDFPAnalysis class that redefine source and sink as source and base
      */
     private br.unb.cic.analysis.dfp.DFPAnalysisSemanticConflicts sourceBaseAnalysis(boolean interprocedural) {
-        return new br.unb.cic.analysis.dfp.DFPAnalysisSemanticConflicts(this.cp, this.definition, depthLimit) {
+        return new br.unb.cic.analysis.dfp.DFPAnalysisSemanticConflicts(this.cp, this.definition, depthLimit, entrypoints) {
 
             /**
              * Here we define the list of source statements for the SVFA analysis as the confluence analysis source statements,
@@ -235,7 +241,7 @@ public class DFPConfluenceAnalysis {
      * @return A instance of a child class of the SVFAAnalysis class that redefine source and sink as source and base
      */
     private DFPAnalysisSemanticConflicts sinkBaseAnalysis(boolean interprocedural) {
-        return new DFPAnalysisSemanticConflicts(this.cp, this.definition, depthLimit) {
+        return new DFPAnalysisSemanticConflicts(this.cp, this.definition, depthLimit, entrypoints) {
 
             /**
              * Here we define the list of source statements for the SVFA analysis as the confluence analysis sink statements,

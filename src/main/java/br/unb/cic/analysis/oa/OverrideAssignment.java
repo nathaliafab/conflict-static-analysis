@@ -78,23 +78,44 @@ public class OverrideAssignment extends SceneTransformer implements AbstractAnal
         oaConflictReport.report();
     }
 
-    public void configureEntryPoints() {
+    public void configureEntryPoints(List<String> entryMethods) {
         List<SootMethod> entryPoints = new ArrayList<>();
 
         definition.loadSourceStatements();
         definition.loadSinkStatements();
 
-        SootMethod sm = getTraversedMethod();
+        SootMethod traversedMethod = getTraversedMethod();
 
-        if (sm != null) {
-            entryPoints.add(sm);
+        if (traversedMethod != null) {
+            entryPoints.add(traversedMethod);
         } else {
-            definition.getSourceStatements().forEach(s -> {
-                if (!entryPoints.contains(s.getSootMethod())) {
-                    entryPoints.add(s.getSootMethod());
-                }
+            List<Statement> allStatements = new ArrayList<>();
+            allStatements.addAll(definition.getSourceStatements());
+            allStatements.addAll(definition.getSinkStatements());
+
+            allStatements.forEach(statement -> {
+                SootClass sootClass = statement.getSootClass();
+                entryMethods.forEach(methodName -> {
+                    try {
+                        SootMethod sootMethod = sootClass.getMethod(methodName);
+                        if (!entryPoints.contains(sootMethod)) {
+                            entryPoints.add(sootMethod);
+                        }
+                    } catch (RuntimeException e) {
+                        // Handle cases where the method is not found
+                        System.err.println("Method not found: " + methodName);
+                    }
+                });
             });
+
+            if (entryPoints.isEmpty()) {
+                definition.getSourceStatements().stream()
+                        .map(Statement::getSootMethod)
+                        .distinct()
+                        .forEach(entryPoints::add);
+            }
         }
+
         Scene.v().setEntryPoints(entryPoints);
     }
 

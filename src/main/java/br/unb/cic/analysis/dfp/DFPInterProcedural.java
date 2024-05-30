@@ -4,8 +4,13 @@ import br.unb.cic.analysis.AbstractMergeConflictDefinition;
 import scala.collection.JavaConverters;
 
 import java.util.Arrays;
+import java.util.List;
 
-public class DFPInterProcedural extends DFPAnalysisSemanticConflicts{
+public class DFPInterProcedural extends DFPAnalysisSemanticConflicts {
+
+    public DFPInterProcedural(String classPath, AbstractMergeConflictDefinition definition, int depthLimit, List<String> entrypoints) {
+        super(classPath, definition, depthLimit, entrypoints);
+    }
 
     public DFPInterProcedural(String classPath, AbstractMergeConflictDefinition definition, int depthLimit) {
         super(classPath, definition, depthLimit);

@@ -5,7 +5,6 @@ import br.unb.cic.analysis.AbstractMergeConflictDefinition;
 import br.unb.cic.analysis.model.Statement;
 import br.unb.cic.soot.graph.*;
 import scala.collection.JavaConverters;
-import soot.PackManager;
 import soot.SootMethod;
 import soot.Unit;
 
@@ -21,6 +20,7 @@ public abstract class DFPAnalysisSemanticConflicts extends JDFP {
 
     private String cp;
     private int depthLimit;
+    private List<String> entrypoints;
 
     private AbstractMergeConflictDefinition definition;
 
@@ -40,6 +40,20 @@ public abstract class DFPAnalysisSemanticConflicts extends JDFP {
         this.definition = definition;
         this.depthLimit = depthLimit;
     }
+
+    public DFPAnalysisSemanticConflicts(String classPath, AbstractMergeConflictDefinition definition, List<String> entrypoints) {
+        this.cp = classPath;
+        this.definition = definition;
+        this.entrypoints = entrypoints;
+    }
+
+    public DFPAnalysisSemanticConflicts(String classPath, AbstractMergeConflictDefinition definition, int depthLimit, List<String> entrypoints) {
+        this.cp = classPath;
+        this.definition = definition;
+        this.depthLimit = depthLimit;
+        this.entrypoints = entrypoints;
+    }
+
 
     @Override
     public String sootClassPath() {
@@ -76,10 +90,22 @@ public abstract class DFPAnalysisSemanticConflicts extends JDFP {
     public final scala.collection.immutable.List<SootMethod> getEntryPoints() {
         definition.loadSourceStatements();
         definition.loadSinkStatements();
-        return JavaConverters.asScalaBuffer(getSourceStatements()
-                .stream()
-                .map(Statement::getSootMethod)
-                .collect(Collectors.toList())).toList();
+
+        List<Statement> allStatements = new ArrayList<>();
+        allStatements.addAll(getSourceStatements());
+        allStatements.addAll(getSinkStatements());
+
+        if (entrypoints == null || entrypoints.isEmpty()) {
+            return JavaConverters.asScalaBuffer(getSourceStatements()
+                    .stream()
+                    .map(Statement::getSootMethod)
+                    .collect(Collectors.toList())).toList();
+        } else {
+            return JavaConverters.asScalaBuffer(
+                    new ArrayList<>(definition.configureEntryPoints(entrypoints, allStatements))
+            ).toList();
+        }
+
     }
 
     @Override

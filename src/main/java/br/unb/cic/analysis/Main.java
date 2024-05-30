@@ -14,7 +14,6 @@ import br.unb.cic.analysis.io.DefaultReader;
 import br.unb.cic.analysis.io.MergeConflictReader;
 import br.unb.cic.analysis.model.Conflict;
 import br.unb.cic.analysis.model.Statement;
-import br.unb.cic.analysis.model.TraversedLine;
 import br.unb.cic.analysis.oa.OverrideAssignment;
 import br.unb.cic.analysis.pdg.PDGAnalysisSemanticConflicts;
 import br.unb.cic.analysis.pdg.PDGIntraProcedural;
@@ -24,7 +23,6 @@ import br.unb.cic.analysis.svfa.SVFAInterProcedural;
 import br.unb.cic.analysis.svfa.SVFAIntraProcedural;
 import br.unb.cic.analysis.svfa.confluence.DFPConfluenceAnalysis;
 import br.unb.cic.diffclass.DiffClass;
-import br.unb.cic.soot.graph.StatementNode;
 import com.google.common.base.Stopwatch;
 import org.apache.commons.cli.*;
 import scala.collection.JavaConverters;
@@ -164,6 +162,10 @@ public class Main {
                 .desc("sets depthMethodsVisited from SVFA")
                 .build();
 
+        Option entrypointsOption = Option.builder("entrypoints").argName("entrypoints").hasArg()
+                .desc("entrypoints")
+                .build();
+
         options.addOption(classPathOption);
         options.addOption(inputFileOption);
         options.addOption(analysisOption);
@@ -173,6 +175,7 @@ public class Main {
         options.addOption(recursiveOption);
         options.addOption(depthLimitOption);
         options.addOption(depthMethodsVisitedSVFAOption);
+        options.addOption(entrypointsOption);
     }
 
     private void runAnalysis(String mode, String classpath) {
@@ -285,18 +288,20 @@ public class Main {
     private void runOverrideAssignmentAnalysis(String classpath, Boolean interprocedural) {
         int depthLimit = Integer.parseInt(cmd.getOptionValue("depthLimit", "5"));
 
+        List<String> entrypoints = convertStringEntrypointsToList(cmd.getOptionValue("entrypoints"));
+
         stopwatch = Stopwatch.createStarted();
 
         OverrideAssignment overrideAssignment =
                 new OverrideAssignment(definition, depthLimit, interprocedural);
 
-        List<String> classes = Collections.singletonList(classpath);
-        SootWrapper.configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis(classes);
 
-        overrideAssignment.configureEntryPoints();
+        SootWrapper.configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis(classpath);
+
+        overrideAssignment.configureEntryPoints(entrypoints);
 
         PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", overrideAssignment));
-        System.out.println("Depth limit: "+overrideAssignment.getDepthLimit());
+        System.out.println("Depth limit: " + overrideAssignment.getDepthLimit());
 
         saveExecutionTime("Configure Soot OA " + (interprocedural ? "Inter" : "Intra"));
 
@@ -338,16 +343,17 @@ public class Main {
     }
 
     private void runPDGAnalysis(String classpath, Boolean omitExceptingUnitEdges) {
-        PDGAnalysisSemanticConflicts analysis = new PDGIntraProcedural(classpath, definition);
-        CDAnalysisSemanticConflicts cd = new CDIntraProcedural(classpath, definition);
+        List<String> entrypoints = convertStringEntrypointsToList(cmd.getOptionValue("entrypoints"));
+        PDGAnalysisSemanticConflicts analysis = new PDGIntraProcedural(classpath, definition, entrypoints);
+        CDAnalysisSemanticConflicts cd = new CDIntraProcedural(classpath, definition, entrypoints);
         cd.setOmitExceptingUnitEdges(omitExceptingUnitEdges);
-        DFPAnalysisSemanticConflicts dfp = new DFPIntraProcedural(classpath, definition);
+        DFPAnalysisSemanticConflicts dfp = new DFPIntraProcedural(classpath, definition, entrypoints);
 
         String type_analysis = omitExceptingUnitEdges ? "" : "e";
 
         stopwatch = Stopwatch.createStarted();
         analysis.configureSoot();
-        saveExecutionTime("Configure Soot PDG"+type_analysis);
+        saveExecutionTime("Configure Soot PDG" + type_analysis);
 
         stopwatch = Stopwatch.createStarted();
 
@@ -367,11 +373,12 @@ public class Main {
 
     private void runDFPAnalysis(String classpath, Boolean interprocedural) {
         int depthLimit = Integer.parseInt(cmd.getOptionValue("depthLimit", "5"));
+        List<String> entrypoints = convertStringEntrypointsToList(cmd.getOptionValue("entrypoints"));
 
         definition.setRecursiveMode(options.hasOption("recursive"));
         DFPAnalysisSemanticConflicts analysis = interprocedural
-                ? new DFPInterProcedural(classpath, definition, depthLimit)
-                : new DFPIntraProcedural(classpath, definition);
+                ? new DFPInterProcedural(classpath, definition, depthLimit, entrypoints)
+                : new DFPIntraProcedural(classpath, definition, entrypoints);
 
         boolean depthMethodsVisited = Boolean.parseBoolean(cmd.getOptionValue("printDepthSVFA", "false"));
         analysis.setPrintDepthVisitedMethods(depthMethodsVisited);
@@ -410,14 +417,14 @@ public class Main {
     }
 
     private void runCDAnalysis(String classpath, Boolean omitExceptingUnitEdges) {
-
-        CDAnalysisSemanticConflicts analysis = new CDIntraProcedural(classpath, definition);
+        List<String> entrypoints = convertStringEntrypointsToList(cmd.getOptionValue("entrypoints"));
+        CDAnalysisSemanticConflicts analysis = new CDIntraProcedural(classpath, definition, entrypoints);
         String type_analysis = omitExceptingUnitEdges ? "" : "e";
 
         analysis.setOmitExceptingUnitEdges(omitExceptingUnitEdges);
         stopwatch = Stopwatch.createStarted();
         analysis.configureSoot();
-        saveExecutionTime("Configure Soot CD"+type_analysis);
+        saveExecutionTime("Configure Soot CD" + type_analysis);
 
         stopwatch = Stopwatch.createStarted();
 
@@ -436,11 +443,12 @@ public class Main {
     }
 
     private void runSparseValueFlowAnalysis(String classpath, boolean interprocedural) {
+        List<String> entrypoints = convertStringEntrypointsToList(cmd.getOptionValue("entrypoints"));
         definition.setRecursiveMode(cmd.hasOption("recursive"));
-        
+
         SVFAAnalysis analysis = interprocedural
-                ? new SVFAInterProcedural(classpath, definition)
-                : new SVFAIntraProcedural(classpath, definition);
+                ? new SVFAInterProcedural(classpath, definition, entrypoints)
+                : new SVFAIntraProcedural(classpath, definition, entrypoints);
 
         boolean depthMethodsVisited = Boolean.parseBoolean(cmd.getOptionValue("printDepthSVFA", "false"));
         analysis.setPrintDepthVisitedMethods(depthMethodsVisited);
@@ -469,10 +477,11 @@ public class Main {
 
     private void runDFPConfluenceAnalysis(String classpath, boolean interprocedural) {
         int depthLimit = Integer.parseInt(cmd.getOptionValue("depthLimit", "5"));
+        List<String> entrypoints = convertStringEntrypointsToList(cmd.getOptionValue("entrypoints"));
         String type_analysis = interprocedural ? "Inter" : "Intra";
 
         definition.setRecursiveMode(options.hasOption("recursive"));
-        DFPConfluenceAnalysis analysis = new DFPConfluenceAnalysis(classpath, this.definition, interprocedural, depthLimit);
+        DFPConfluenceAnalysis analysis = new DFPConfluenceAnalysis(classpath, this.definition, interprocedural, depthLimit, entrypoints);
         boolean depthMethodsVisited = Boolean.parseBoolean(cmd.getOptionValue("printDepthSVFA", "false"));
 
         analysis.execute(false);
@@ -600,7 +609,32 @@ public class Main {
         }
     }
 
-    public String formatConflict(String p){
+    public String formatConflict(String p) {
         return p.replace("), Node", ") => Node");
+    }
+
+    private List<String> convertStringEntrypointsToList(String str) {
+        if (str == null) {
+            return Collections.emptyList();
+        }
+
+        String trimmedStr = str.substring(1, str.length() - 1);
+        String[] elements = trimmedStr.split(", ");
+
+        List<String> entrypointsList = new ArrayList<>();
+        for (String element : elements) {
+            entrypointsList.add(extractMethodSignature(element));
+        }
+
+        return entrypointsList;
+    }
+
+    private String extractMethodSignature(String fullMethodSignature) {
+        int lastColonIndex = fullMethodSignature.lastIndexOf(':');
+        if (lastColonIndex != -1) {
+            return fullMethodSignature.substring(lastColonIndex + 1).trim();
+        } else {
+            return "";
+        }
     }
 }

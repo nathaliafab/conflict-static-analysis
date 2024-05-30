@@ -8,11 +8,7 @@ import soot.jimple.IdentityStmt;
 import soot.jimple.InvokeStmt;
 import soot.jimple.Stmt;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.*;
 
 /**
  * This abstract class works as a contract. Whenever we
@@ -334,6 +330,29 @@ public abstract class AbstractMergeConflictDefinition {
 
     public Set<SootMethod> getEntryMethods() {
         return entryMethods;
+    }
+
+    public Set<SootMethod> configureEntryPoints(List<String> entryMethods, List<Statement> allStatements) {
+        Set<SootMethod> entryPoints = new HashSet<>();
+
+        for (Statement statement : allStatements) {
+            SootClass sootClass = statement.getSootClass();
+            for (String methodName : entryMethods) {
+                try {
+                    SootMethod sootMethod = sootClass.getMethod(methodName);
+                    entryPoints.add(sootMethod);
+                } catch (RuntimeException e) {
+                    // Handle cases where the method is not found
+                    System.err.println("Method not found: " + methodName + " in class " + sootClass.getName());
+                }
+            }
+        }
+
+        if (entryPoints.isEmpty()) {
+            return new HashSet<>(getEntryMethods());
+        }
+
+        return entryPoints;
     }
 
 }

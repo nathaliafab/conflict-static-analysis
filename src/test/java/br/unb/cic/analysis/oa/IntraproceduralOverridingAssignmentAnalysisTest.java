@@ -11,8 +11,7 @@ import soot.PackManager;
 import soot.Transform;
 
 import java.io.FileWriter;
-import java.util.Collections;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Set;
 
 public class IntraproceduralOverridingAssignmentAnalysisTest {
@@ -22,11 +21,9 @@ public class IntraproceduralOverridingAssignmentAnalysisTest {
     private void configureTest(OverrideAssignment analysis) {
         G.reset();
 
-        List<String> testClasses = Collections.singletonList("target/test-classes/");
+        SootWrapper.configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis("target/test-classes/");
 
-        SootWrapper.configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis(testClasses);
-
-        analysis.configureEntryPoints();
+        analysis.configureEntryPoints(new ArrayList<>());
 
         PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", analysis));
         SootWrapper.applyPackages();
