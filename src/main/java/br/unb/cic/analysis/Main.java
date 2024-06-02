@@ -293,12 +293,11 @@ public class Main {
         stopwatch = Stopwatch.createStarted();
 
         OverrideAssignment overrideAssignment =
-                new OverrideAssignment(definition, depthLimit, interprocedural);
-
+                new OverrideAssignment(definition, depthLimit, interprocedural, entrypoints);
 
         SootWrapper.configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis(classpath);
 
-        overrideAssignment.configureEntryPoints(entrypoints);
+        overrideAssignment.configureEntryPoints();
 
         PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", overrideAssignment));
         System.out.println("Depth limit: " + overrideAssignment.getDepthLimit());

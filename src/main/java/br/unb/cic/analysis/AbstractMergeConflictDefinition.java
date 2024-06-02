@@ -332,20 +332,19 @@ public abstract class AbstractMergeConflictDefinition {
         return entryMethods;
     }
 
-    public Set<SootMethod> configureEntryPoints(List<String> entryMethods, List<Statement> allStatements) {
+    /**
+     * Configures the entry points for the application based on the provided entry method names and statements.
+     *
+     * @param entryMethodNames a list of method names to be considered as entry points
+     * @param allStatements    a list of all statements containing SootClass objects
+     * @return a set of SootMethods representing the entry points
+     */
+    public Set<SootMethod> configureEntryPoints(List<String> entryMethodNames, List<Statement> allStatements) {
         Set<SootMethod> entryPoints = new HashSet<>();
 
         for (Statement statement : allStatements) {
             SootClass sootClass = statement.getSootClass();
-            for (String methodName : entryMethods) {
-                try {
-                    SootMethod sootMethod = sootClass.getMethod(methodName);
-                    entryPoints.add(sootMethod);
-                } catch (RuntimeException e) {
-                    // Handle cases where the method is not found
-                    System.err.println("Method not found: " + methodName + " in class " + sootClass.getName());
-                }
-            }
+            addMethodsToEntryPoints(entryPoints, sootClass, entryMethodNames);
         }
 
         if (entryPoints.isEmpty()) {
@@ -353,6 +352,26 @@ public abstract class AbstractMergeConflictDefinition {
         }
 
         return entryPoints;
+    }
+
+    /**
+     * Adds methods to the entry points set based on the provided method names and SootClass.
+     *
+     * @param entryPoints a set to which the methods will be added
+     * @param sootClass   the SootClass containing the methods
+     * @param methodNames a list of method names to be added as entry points
+     */
+    private void addMethodsToEntryPoints(Set<SootMethod> entryPoints, SootClass sootClass, List<String> methodNames) {
+        for (String methodName : methodNames) {
+            try {
+                SootMethod sootMethod = sootClass.getMethod(methodName);
+                if (!entryPoints.contains(sootMethod)) {
+                    entryPoints.add(sootMethod);
+                }
+            } catch (RuntimeException e) {
+                System.err.println("Method not found: " + methodName + " in class " + sootClass.getName());
+            }
+        }
     }
 
 }

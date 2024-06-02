@@ -2,7 +2,7 @@ package br.unb.cic.analysis.dfp;
 
 import br.ufpe.cin.soot.analysis.jimple.JDFP;
 import br.unb.cic.analysis.AbstractMergeConflictDefinition;
-import br.unb.cic.analysis.model.Statement;
+import br.unb.cic.analysis.StatementsUtil;
 import br.unb.cic.soot.graph.*;
 import scala.collection.JavaConverters;
 import soot.SootMethod;
@@ -10,7 +10,6 @@ import soot.Unit;
 
 import java.io.File;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * An analysis wrapper around the Sparse value
@@ -20,40 +19,33 @@ public abstract class DFPAnalysisSemanticConflicts extends JDFP {
 
     private String cp;
     private int depthLimit;
-    private List<String> entrypoints;
-
-    private AbstractMergeConflictDefinition definition;
+    private StatementsUtil statementsUtils;
 
     /**
-     * PDGAAnalysis constructor
-     * @param classPath a classpath to the software under analysis
-     * @param definition a definition with the sources and sinks unities
+     * DFPAnalysis constructor
+     *
+     * @param classPath   a classpath to the software under analysis
+     * @param definition  a definition with the sources and sinks unities
+     * @param depthLimit  the depth limit for the analysis
+     * @param entrypoints the list of entry points for the analysis
      */
-    public DFPAnalysisSemanticConflicts(String classPath, AbstractMergeConflictDefinition definition) {
+    public DFPAnalysisSemanticConflicts(String classPath, AbstractMergeConflictDefinition definition, int depthLimit, List<String> entrypoints) {
         this.cp = classPath;
-        this.definition = definition;
-        this.depthLimit = 5;
+        this.depthLimit = depthLimit;
+        this.statementsUtils = new StatementsUtil(definition, entrypoints);
+    }
+
+    public DFPAnalysisSemanticConflicts(String classPath, AbstractMergeConflictDefinition definition) {
+        this(classPath, definition, 5, new ArrayList<>());
     }
 
     public DFPAnalysisSemanticConflicts(String classPath, AbstractMergeConflictDefinition definition, int depthLimit) {
-        this.cp = classPath;
-        this.definition = definition;
-        this.depthLimit = depthLimit;
+        this(classPath, definition, depthLimit, new ArrayList<>());
     }
 
     public DFPAnalysisSemanticConflicts(String classPath, AbstractMergeConflictDefinition definition, List<String> entrypoints) {
-        this.cp = classPath;
-        this.definition = definition;
-        this.entrypoints = entrypoints;
+        this(classPath, definition, 5, entrypoints);
     }
-
-    public DFPAnalysisSemanticConflicts(String classPath, AbstractMergeConflictDefinition definition, int depthLimit, List<String> entrypoints) {
-        this.cp = classPath;
-        this.definition = definition;
-        this.depthLimit = depthLimit;
-        this.entrypoints = entrypoints;
-    }
-
 
     @Override
     public String sootClassPath() {
@@ -86,26 +78,10 @@ public abstract class DFPAnalysisSemanticConflicts extends JDFP {
         return JavaConverters.asScalaBuffer(Arrays.asList(array)).toList();
     }
 
+
     @Override
     public final scala.collection.immutable.List<SootMethod> getEntryPoints() {
-        definition.loadSourceStatements();
-        definition.loadSinkStatements();
-
-        List<Statement> allStatements = new ArrayList<>();
-        allStatements.addAll(getSourceStatements());
-        allStatements.addAll(getSinkStatements());
-
-        if (entrypoints == null || entrypoints.isEmpty()) {
-            return JavaConverters.asScalaBuffer(getSourceStatements()
-                    .stream()
-                    .map(Statement::getSootMethod)
-                    .collect(Collectors.toList())).toList();
-        } else {
-            return JavaConverters.asScalaBuffer(
-                    new ArrayList<>(definition.configureEntryPoints(entrypoints, allStatements))
-            ).toList();
-        }
-
+        return this.statementsUtils.getEntryPoints();
     }
 
     @Override
@@ -120,25 +96,17 @@ public abstract class DFPAnalysisSemanticConflicts extends JDFP {
     }
 
     protected boolean isSource(Unit unit) {
-        return getSourceStatements()
+        return this.statementsUtils.getDefinition().getSourceStatements()
                 .stream()
                 .map(stmt -> stmt.getUnit())
                 .anyMatch(u -> u.equals(unit));
     }
 
     protected boolean isSink(Unit unit) {
-        return getSinkStatements()
+        return this.statementsUtils.getDefinition().getSinkStatements()
                 .stream()
                 .map(stmt -> stmt.getUnit())
                 .anyMatch(u -> u.equals(unit));
-    }
-
-    protected List<Statement> getSourceStatements() {
-        return definition.getSourceStatements();
-    }
-
-    protected List<Statement> getSinkStatements() {
-        return definition.getSinkStatements();
     }
 
     @Override
@@ -157,7 +125,7 @@ public abstract class DFPAnalysisSemanticConflicts extends JDFP {
     }
 
     public int getDepthLimit() {
-        return depthLimit;
+        return this.depthLimit;
     }
 
     public void setDepthLimit(int depthLimit) {

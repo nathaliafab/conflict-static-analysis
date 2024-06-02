@@ -151,16 +151,16 @@ public class SootWrapper {
         }
     }
 
-    private static String pathToJCE() {
+    public static String pathToJCE() {
         // When whole program mode is disabled, the classpath misses jce.jar
         return System.getProperty("java.home") + File.separator + "lib" + File.separator + "jce.jar";
     }
 
-    private static String pathToRT() {
+    public static String pathToRT() {
         return System.getProperty("java.home") + File.separator + "lib" + File.separator + "rt.jar";
     }
 
-    private static int getJavaVersion() {
+    public static int getJavaVersion() {
         String version = System.getProperty("java.version");
         if (version.startsWith("1.")) {
             version = version.substring(2, 3);

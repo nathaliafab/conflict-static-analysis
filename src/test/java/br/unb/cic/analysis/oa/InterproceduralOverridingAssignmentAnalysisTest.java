@@ -35,7 +35,7 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
         PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", analysis));
         saveExecutionTime("Configure Soot OA Inter");
 
-        analysis.configureEntryPoints(new ArrayList<>());
+        analysis.configureEntryPoints();
         saveExecutionTime("Configure Entrypoints OA Inter");
 
 
@@ -381,7 +381,7 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
 
         enableSparkCallGraph();
 
-        analysis.configureEntryPoints(new ArrayList<>());
+        analysis.configureEntryPoints();
 
         PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", analysis));
         SootWrapper.applyPackages();
@@ -435,7 +435,7 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
 
         enableSparkCallGraph();
 
-        analysis.configureEntryPoints(new ArrayList<>());
+        analysis.configureEntryPoints();
 
         PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", analysis));
         SootWrapper.applyPackages();
@@ -952,7 +952,11 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
         String sampleClassPath = "br.unb.cic.analysis.samples.ioa.BaseConflictTwoEntrypointsSample";
         AbstractMergeConflictDefinition definition = DefinitionFactory
                 .definition(sampleClassPath, new int[]{11, 16}, new int[]{18});
-        OverrideAssignment analysis = new OverrideAssignment(definition);
+
+        List<String> entrypoints = new ArrayList<>();
+        entrypoints.add("void main()");
+
+        OverrideAssignment analysis = new OverrideAssignment(definition, 5, true, entrypoints);
 
         stopwatch = Stopwatch.createStarted();
         G.reset();
@@ -964,9 +968,7 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
         PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", analysis));
         saveExecutionTime("Configure Soot OA Inter");
 
-        List<String> entrypoints = new ArrayList<>();
-        entrypoints.add("void main()");
-        analysis.configureEntryPoints(entrypoints);
+        analysis.configureEntryPoints();
         saveExecutionTime("Configure Entrypoints OA Inter");
 
 
