@@ -13,7 +13,9 @@ import soot.G;
 import soot.PackManager;
 import soot.Scene;
 import soot.Transform;
+import soot.options.Options;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
@@ -21,7 +23,7 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static br.unb.cic.analysis.SootWrapper.enableSparkCallGraph;
+import static br.unb.cic.analysis.SootWrapper.*;
 
 public class InterproceduralOverridingAssignmentAnalysisTest {
     public static Stopwatch stopwatch;
@@ -361,7 +363,8 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
 
         G.reset();
 
-        List<String> testClasses = Collections.singletonList("target/test-classes/");
+        String classpath = "target/test-classes/";
+        List<String> testClasses = Collections.singletonList(classpath);
 
         soot.options.Options.v().set_no_bodies_for_excluded(true);
         soot.options.Options.v().set_allow_phantom_refs(true);
@@ -370,8 +373,19 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
         soot.options.Options.v().set_process_dir(testClasses);
         soot.options.Options.v().set_full_resolver(true);
         soot.options.Options.v().set_keep_line_number(true);
-        soot.options.Options.v().set_prepend_classpath(false);
         soot.options.Options.v().set_include(stringList);
+
+        // JAVA 8
+        if (getJavaVersion() < 9) {
+            Options.v().set_prepend_classpath(true);
+            Options.v().set_soot_classpath(classpath + File.pathSeparator + pathToJCE() + File.pathSeparator + pathToRT());
+        }
+        // JAVA VERSION 9 && IS A CLASSPATH PROJECT
+        else if (getJavaVersion() >= 9) {
+            Options.v().set_soot_classpath(classpath);
+        }
+
+
         //Options.v().setPhaseOption("cg.spark", "on");
         //Options.v().setPhaseOption("cg.spark", "verbose:true");
         soot.options.Options.v().setPhaseOption("cg.spark", "enabled:true");
@@ -415,7 +429,8 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
         OverrideAssignment analysis = new OverrideAssignment(definition);
         G.reset();
 
-        List<String> testClasses = Collections.singletonList("target/test-classes/");
+        String classpath = "target/test-classes/";
+        List<String> testClasses = Collections.singletonList(classpath);
 
         soot.options.Options.v().set_no_bodies_for_excluded(true);
         soot.options.Options.v().set_allow_phantom_refs(true);
@@ -424,8 +439,19 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
         soot.options.Options.v().set_process_dir(testClasses);
         soot.options.Options.v().set_full_resolver(true);
         soot.options.Options.v().set_keep_line_number(true);
-        soot.options.Options.v().set_prepend_classpath(false);
         soot.options.Options.v().set_include(stringList);
+
+        // JAVA 8
+        if (getJavaVersion() < 9) {
+            Options.v().set_prepend_classpath(true);
+            Options.v().set_soot_classpath(classpath + File.pathSeparator + pathToJCE() + File.pathSeparator + pathToRT());
+        }
+        // JAVA VERSION 9 && IS A CLASSPATH PROJECT
+        else if (getJavaVersion() >= 9) {
+            Options.v().set_soot_classpath(classpath);
+        }
+
+
         //Options.v().setPhaseOption("cg.spark", "on");
         //Options.v().setPhaseOption("cg.spark", "verbose:true");
         soot.options.Options.v().setPhaseOption("cg.spark", "enabled:true");
