@@ -339,16 +339,12 @@ public abstract class AbstractMergeConflictDefinition {
      * @param allStatements    a list of all statements containing SootClass objects
      * @return a set of SootMethods representing the entry points
      */
-    public Set<SootMethod> configureEntryPoints(List<String> entryMethodNames, List<Statement> allStatements) {
+    public Set<SootMethod> configureEntryPoints(List<String> entryMethodNames, List<Statement> allStatements) throws NoSuchMethodException {
         Set<SootMethod> entryPoints = new HashSet<>();
 
         for (Statement statement : allStatements) {
             SootClass sootClass = statement.getSootClass();
             addMethodsToEntryPoints(entryPoints, sootClass, entryMethodNames);
-        }
-
-        if (entryPoints.isEmpty()) {
-            return new HashSet<>(getEntryMethods());
         }
 
         return entryPoints;
@@ -361,7 +357,7 @@ public abstract class AbstractMergeConflictDefinition {
      * @param sootClass   the SootClass containing the methods
      * @param methodNames a list of method names to be added as entry points
      */
-    private void addMethodsToEntryPoints(Set<SootMethod> entryPoints, SootClass sootClass, List<String> methodNames) {
+    private void addMethodsToEntryPoints(Set<SootMethod> entryPoints, SootClass sootClass, List<String> methodNames) throws NoSuchMethodException {
         for (String methodName : methodNames) {
             try {
                 SootMethod sootMethod = sootClass.getMethod(methodName);
@@ -369,7 +365,7 @@ public abstract class AbstractMergeConflictDefinition {
                     entryPoints.add(sootMethod);
                 }
             } catch (RuntimeException e) {
-                System.err.println("Method not found: " + methodName + " in class " + sootClass.getName());
+                throw new NoSuchMethodException("Method not found: " + methodName + " in class " + sootClass.getName());
             }
         }
     }
