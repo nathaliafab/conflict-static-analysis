@@ -631,7 +631,11 @@ public class Main {
     private String extractMethodSignature(String fullMethodSignature) {
         int lastColonIndex = fullMethodSignature.lastIndexOf(':');
         if (lastColonIndex != -1) {
-            return fullMethodSignature.substring(lastColonIndex + 1).trim();
+            String methodSignature = fullMethodSignature.substring(lastColonIndex + 1).trim();
+            if (methodSignature.endsWith(">")) {
+                methodSignature = methodSignature.substring(0, methodSignature.length() - 1);
+            }
+            return methodSignature;
         } else {
             return "";
         }
