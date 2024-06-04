@@ -24,8 +24,9 @@ public abstract class CDAnalysisSemanticConflicts extends JCD {
     /**
      * CDAnalysis constructor
      *
-     * @param classPath  a classpath to the software under analysis
-     * @param definition a definition with the sources and sinks unities
+     * @param classPath   a classpath to the software under analysis
+     * @param definition  a definition with the sources and sinks unities
+     * @param entrypoints the list of entry points for the analysis
      */
     public CDAnalysisSemanticConflicts(String classPath, AbstractMergeConflictDefinition definition, List<String> entrypoints) {
         this.cp = classPath;
