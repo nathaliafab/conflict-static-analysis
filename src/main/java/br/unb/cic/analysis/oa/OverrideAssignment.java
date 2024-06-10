@@ -3,10 +3,7 @@ package br.unb.cic.analysis.oa;
 import br.unb.cic.analysis.AbstractAnalysis;
 import br.unb.cic.analysis.AbstractMergeConflictDefinition;
 import br.unb.cic.analysis.StatementsUtil;
-import br.unb.cic.analysis.model.Conflict;
-import br.unb.cic.analysis.model.OAConflictReport;
-import br.unb.cic.analysis.model.Statement;
-import br.unb.cic.analysis.model.TraversedLine;
+import br.unb.cic.analysis.model.*;
 import scala.collection.JavaConverters;
 import soot.*;
 import soot.jimple.*;
@@ -300,7 +297,7 @@ public class OverrideAssignment extends SceneTransformer implements AbstractAnal
     }
 
     private void addConflict(Statement left, Statement right) {
-        Conflict conflict = new Conflict(left, right);
+        Conflict conflict = new OAConflict(left, right, this.interprocedural);
         if (!this.oaConflictReport.contains(conflict)) {
             this.oaConflictReport.addConflict(conflict);
 
