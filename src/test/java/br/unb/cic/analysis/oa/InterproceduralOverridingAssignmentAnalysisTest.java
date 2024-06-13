@@ -5,6 +5,7 @@ import br.unb.cic.analysis.SootWrapper;
 import br.unb.cic.analysis.model.Conflict;
 import br.unc.cic.analysis.test.DefinitionFactory;
 import br.unc.cic.analysis.test.MarkingClass;
+import com.google.common.base.Stopwatch;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -12,23 +13,34 @@ import soot.G;
 import soot.PackManager;
 import soot.Scene;
 import soot.Transform;
+import soot.options.Options;
 
+import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
-import static br.unb.cic.analysis.SootWrapper.enableSparkCallGraph;
+import static br.unb.cic.analysis.SootWrapper.*;
 
 public class InterproceduralOverridingAssignmentAnalysisTest {
+    public static Stopwatch stopwatch;
     private void configureTest(OverrideAssignment analysis) {
+        stopwatch = Stopwatch.createStarted();
         G.reset();
 
-        List<String> testClasses = Collections.singletonList("target/test-classes/");
+        SootWrapper.configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis("target/test-classes/");
 
-        SootWrapper.configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis(testClasses);
-
-        analysis.configureEntryPoints();
 
         PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", analysis));
+        saveExecutionTime("Configure Soot OA Inter");
+
+        analysis.configureEntryPoints();
+        saveExecutionTime("Configure Entrypoints OA Inter");
+
+
         SootWrapper.applyPackages();
 
         try {
@@ -36,7 +48,25 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        saveExecutionTime("Time to perform OA Inter");
     }
+
+    public void saveExecutionTime(String description) {
+
+        NumberFormat formatter = new DecimalFormat("#0.00000");
+
+        long time = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        try {
+            FileWriter myWriter = new FileWriter("time.txt", true);
+            myWriter.write(description + ";" + formatter.format(time / 1000d) + "\n");
+            System.out.println(description + " " + formatter.format(time / 1000d));
+            myWriter.close();
+        } catch (IOException e) {
+            System.out.println("An error occurred.");
+            e.printStackTrace();
+        }
+    }
+
 
     private void exportResults(Set<Conflict> conflicts) throws Exception {
         final String out = "out.txt";
@@ -333,7 +363,8 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
 
         G.reset();
 
-        List<String> testClasses = Collections.singletonList("target/test-classes/");
+        String classpath = "target/test-classes/";
+        List<String> testClasses = Collections.singletonList(classpath);
 
         soot.options.Options.v().set_no_bodies_for_excluded(true);
         soot.options.Options.v().set_allow_phantom_refs(true);
@@ -342,8 +373,19 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
         soot.options.Options.v().set_process_dir(testClasses);
         soot.options.Options.v().set_full_resolver(true);
         soot.options.Options.v().set_keep_line_number(true);
-        soot.options.Options.v().set_prepend_classpath(false);
         soot.options.Options.v().set_include(stringList);
+
+        // JAVA 8
+        if (getJavaVersion() < 9) {
+            Options.v().set_prepend_classpath(true);
+            Options.v().set_soot_classpath(classpath + File.pathSeparator + pathToJCE() + File.pathSeparator + pathToRT());
+        }
+        // JAVA VERSION 9 && IS A CLASSPATH PROJECT
+        else if (getJavaVersion() >= 9) {
+            Options.v().set_soot_classpath(classpath);
+        }
+
+
         //Options.v().setPhaseOption("cg.spark", "on");
         //Options.v().setPhaseOption("cg.spark", "verbose:true");
         soot.options.Options.v().setPhaseOption("cg.spark", "enabled:true");
@@ -387,7 +429,8 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
         OverrideAssignment analysis = new OverrideAssignment(definition);
         G.reset();
 
-        List<String> testClasses = Collections.singletonList("target/test-classes/");
+        String classpath = "target/test-classes/";
+        List<String> testClasses = Collections.singletonList(classpath);
 
         soot.options.Options.v().set_no_bodies_for_excluded(true);
         soot.options.Options.v().set_allow_phantom_refs(true);
@@ -396,8 +439,19 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
         soot.options.Options.v().set_process_dir(testClasses);
         soot.options.Options.v().set_full_resolver(true);
         soot.options.Options.v().set_keep_line_number(true);
-        soot.options.Options.v().set_prepend_classpath(false);
         soot.options.Options.v().set_include(stringList);
+
+        // JAVA 8
+        if (getJavaVersion() < 9) {
+            Options.v().set_prepend_classpath(true);
+            Options.v().set_soot_classpath(classpath + File.pathSeparator + pathToJCE() + File.pathSeparator + pathToRT());
+        }
+        // JAVA VERSION 9 && IS A CLASSPATH PROJECT
+        else if (getJavaVersion() >= 9) {
+            Options.v().set_soot_classpath(classpath);
+        }
+
+
         //Options.v().setPhaseOption("cg.spark", "on");
         //Options.v().setPhaseOption("cg.spark", "verbose:true");
         soot.options.Options.v().setPhaseOption("cg.spark", "enabled:true");
@@ -907,5 +961,55 @@ public class InterproceduralOverridingAssignmentAnalysisTest {
         OverrideAssignment analysis = new OverrideAssignment(definition);
         configureTest(analysis);
         Assert.assertEquals(0, analysis.getConflicts().size());
+    }
+
+    @Test
+    public void baseConflictOneEntrypointsTest() {
+        String sampleClassPath = "br.unb.cic.analysis.samples.ioa.BaseConflictOneEntrypointsSample";
+        AbstractMergeConflictDefinition definition = DefinitionFactory
+                .definition(sampleClassPath, new int[]{11}, new int[]{17});
+        OverrideAssignment analysis = new OverrideAssignment(definition);
+        configureTest(analysis);
+        Assert.assertEquals(1, analysis.getConflicts().size());
+    }
+
+    @Test
+    public void baseConflictTwoEntrypointsTest() {
+        String sampleClassPath = "br.unb.cic.analysis.samples.ioa.BaseConflictTwoEntrypointsSample";
+        AbstractMergeConflictDefinition definition = DefinitionFactory
+                .definition(sampleClassPath, new int[]{11, 16}, new int[]{18});
+
+        List<String> entrypoints = new ArrayList<>();
+        entrypoints.add("void main()");
+
+        OverrideAssignment analysis = new OverrideAssignment(definition, 5, true, entrypoints);
+
+        stopwatch = Stopwatch.createStarted();
+        G.reset();
+
+
+        SootWrapper.configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis("target/test-classes/");
+
+
+        PackManager.v().getPack("wjtp").add(new Transform("wjtp.analysis", analysis));
+        saveExecutionTime("Configure Soot OA Inter");
+
+        analysis.configureEntryPoints();
+        saveExecutionTime("Configure Entrypoints OA Inter");
+
+
+        SootWrapper.applyPackages();
+
+        try {
+            exportResults(analysis.getConflicts());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        saveExecutionTime("Time to perform OA Inter");
+
+        //configureTest(analysis);
+        Assert.assertEquals(1, analysis.getConflicts().size());
+
+
     }
 }

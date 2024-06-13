@@ -4,13 +4,9 @@ import br.unb.cic.analysis.AbstractMergeConflictDefinition;
 import br.unb.cic.analysis.Main;
 import br.unb.cic.analysis.dfp.DFPAnalysisSemanticConflicts;
 import br.unb.cic.analysis.model.Statement;
-import br.unb.cic.analysis.model.TraversedLine;
 import br.unb.cic.soot.graph.StatementNode;
-import ch.qos.logback.core.net.SyslogOutputStream;
 import com.google.common.base.Stopwatch;
-import soot.AbstractSootFieldRef;
 import soot.G;
-import soot.Scene;
 import soot.Unit;
 import soot.options.Options;
 
@@ -23,30 +19,39 @@ public class DFPConfluenceAnalysis {
     private AbstractMergeConflictDefinition definition;
     private Set<ConfluenceConflict> confluentFlows = new HashSet<>();
     private int depthLimit;
+    private List<String> entrypoints;
     private String getGraphSize;
-
     private int visitedMethods;
 
-    public DFPConfluenceAnalysis(String classPath, AbstractMergeConflictDefinition definition, boolean interprocedural) {
-        this.cp = classPath;
-        this.definition = definition;
-        this.interprocedural = interprocedural;
-        this.depthLimit = 5;
-    }
-
-    public DFPConfluenceAnalysis(String classPath, AbstractMergeConflictDefinition definition, boolean interprocedural, int depthLimit) {
+    /**
+     * DFPConfluenceAnalysis constructor
+     *
+     * @param classPath       a classpath to the software under analysis
+     * @param definition      a definition with the sources and sinks unities
+     * @param interprocedural a flag indicating whether to consider interprocedural analysis.
+     * @param depthLimit      the depth limit for the analysis
+     * @param entrypoints     the list of entry points for the analysis
+     */
+    public DFPConfluenceAnalysis(String classPath, AbstractMergeConflictDefinition definition, boolean interprocedural, int depthLimit, List<String> entrypoints) {
         this.cp = classPath;
         this.definition = definition;
         this.interprocedural = interprocedural;
         this.depthLimit = depthLimit;
+        this.entrypoints = entrypoints;
     }
+
+    public DFPConfluenceAnalysis(String classPath, AbstractMergeConflictDefinition definition, boolean interprocedural) {
+        this(classPath, definition, interprocedural, 5, new ArrayList<>());
+    }
+
 
     /**
      * After the execute method has been called, it returns the confluent conflicts returned by the algorithm
+     *
      * @return a set of confluence conflicts
      */
     public Set<ConfluenceConflict> getConfluentConflicts() {
-        return confluentFlows;
+        return this.confluentFlows;
     }
 
     /**
@@ -56,7 +61,7 @@ public class DFPConfluenceAnalysis {
     public void execute(boolean depthMethodsVisited) {
         DFPAnalysisSemanticConflicts sourceBaseAnalysis = sourceBaseAnalysis(interprocedural);
         String type_analysis;
-        if (interprocedural) {
+        if (this.interprocedural) {
             type_analysis = "Inter";
         } else {
             type_analysis = "Intra";
@@ -80,7 +85,7 @@ public class DFPConfluenceAnalysis {
 
         G.v().reset();
 
-        DFPAnalysisSemanticConflicts sinkBaseAnalysis = sinkBaseAnalysis(interprocedural);
+        DFPAnalysisSemanticConflicts sinkBaseAnalysis = sinkBaseAnalysis(this.interprocedural);
         sinkBaseAnalysis.setPrintDepthVisitedMethods(depthMethodsVisited);
 
         sinkBaseAnalysis.configureSoot();
@@ -93,7 +98,7 @@ public class DFPConfluenceAnalysis {
 
         Set<List<StatementNode>> sinkBasePaths = sinkBaseAnalysis.findSourceSinkPaths();
 
-        confluentFlows = intersectPathsByLastNode(sourceBasePaths, sinkBasePaths);
+        this.confluentFlows = intersectPathsByLastNode(sourceBasePaths, sinkBasePaths);
 
         m.saveExecutionTime("Time to perform Confluence 2 "+type_analysis);
 
@@ -108,16 +113,16 @@ public class DFPConfluenceAnalysis {
          List<Integer> right_lines = new ArrayList<>();
          List<Integer> cf_lines = new ArrayList<>();
 
-         for (ConfluenceConflict conflict: confluentFlows){
+         for (ConfluenceConflict conflict : this.confluentFlows) {
 
-            StatementNode df1 = conflict.getSourceNodePath().get(0);
-            StatementNode df2 = conflict.getSinkNodePath().get(0);
+             StatementNode df1 = conflict.getSourceNodePath().get(0);
+             StatementNode df2 = conflict.getSinkNodePath().get(0);
 
-            StatementNode confluence = conflict.getSinkNodePath().get(conflict.getSinkNodePath().size()-1);
+             StatementNode confluence = conflict.getSinkNodePath().get(conflict.getSinkNodePath().size() - 1);
 
-            Integer left_line = df1.getPathVisitedMethods().head().line();
-            Integer right_line = df2.getPathVisitedMethods().head().line();
-            Integer cf_line = confluence.getPathVisitedMethods().head().line();
+             Integer left_line = df1.getPathVisitedMethods().head().line();
+             Integer right_line = df2.getPathVisitedMethods().head().line();
+             Integer cf_line = confluence.getPathVisitedMethods().head().line();
 
             Boolean contains_lines = left_lines.contains(left_line)
                     && right_lines.contains(right_line)
@@ -175,7 +180,6 @@ public class DFPConfluenceAnalysis {
         return result;
     }
 
-
     public StatementNode containsKey(Map<StatementNode, List<StatementNode>> pathEndHash, StatementNode lastNode){
         for (StatementNode stmt: pathEndHash.keySet()){
             if (lastNode.equals(stmt)) {
@@ -199,17 +203,7 @@ public class DFPConfluenceAnalysis {
      * @return A instance of a child class of the JDFPAnalysis class that redefine source and sink as source and base
      */
     private br.unb.cic.analysis.dfp.DFPAnalysisSemanticConflicts sourceBaseAnalysis(boolean interprocedural) {
-        return new br.unb.cic.analysis.dfp.DFPAnalysisSemanticConflicts(this.cp, this.definition, depthLimit) {
-
-            /**
-             * Here we define the list of source statements for the SVFA analysis as the confluence analysis source statements,
-             * this interferes with the isSource method, that will be used to determine if a Unit is a source and also
-             * will be used at the isSink method.
-             */
-            @Override
-            protected List<Statement> getSourceStatements() {
-                return definition.getSourceStatements();
-            }
+        return new br.unb.cic.analysis.dfp.DFPAnalysisSemanticConflicts(this.cp, this.definition, this.depthLimit, this.entrypoints) {
 
             /**
              * As in this case we want to detect flows between source and base, this methods defines isSink as all units
@@ -235,17 +229,7 @@ public class DFPConfluenceAnalysis {
      * @return A instance of a child class of the SVFAAnalysis class that redefine source and sink as source and base
      */
     private DFPAnalysisSemanticConflicts sinkBaseAnalysis(boolean interprocedural) {
-        return new DFPAnalysisSemanticConflicts(this.cp, this.definition, depthLimit) {
-
-            /**
-             * Here we define the list of source statements for the SVFA analysis as the confluence analysis sink statements,
-             * this interferes with the isSource method, that will be used to determine if a Unit is a source and also
-             * will be used at the isSink method.
-             */
-            @Override
-            protected List<Statement> getSourceStatements() {
-                return definition.getSinkStatements();
-            }
+        return new DFPAnalysisSemanticConflicts(this.cp, this.definition, this.depthLimit, this.entrypoints) {
 
             /**
              * As in this case we want to detect flows between sink and base, this methods defines isSink as all units
@@ -276,8 +260,8 @@ public class DFPConfluenceAnalysis {
     }
 
     private boolean isNotSourceOrSink(Unit unit) {
-        return unitIsNotOnList(definition.getSourceStatements(), unit) &&
-                unitIsNotOnList(definition.getSinkStatements(), unit);
+        return unitIsNotOnList(this.definition.getSourceStatements(), unit) &&
+                unitIsNotOnList(this.definition.getSinkStatements(), unit);
     }
 
     private boolean unitIsNotOnList(List<Statement> statements, Unit unit) {
@@ -285,7 +269,7 @@ public class DFPConfluenceAnalysis {
     }
 
     public int getVisitedMethods() {
-        return visitedMethods;
+        return this.visitedMethods;
     }
 
     public void setGraphSize(DFPAnalysisSemanticConflicts source, DFPAnalysisSemanticConflicts sink){
@@ -304,6 +288,6 @@ public class DFPConfluenceAnalysis {
     }
 
     public int getDepthLimit() {
-        return depthLimit;
+        return this.depthLimit;
     }
 }

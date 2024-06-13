@@ -1,7 +1,7 @@
 package br.unb.cic.analysis.svfa;
 
 import br.unb.cic.analysis.AbstractMergeConflictDefinition;
-import br.unb.cic.analysis.model.Statement;
+import br.unb.cic.analysis.StatementsUtil;
 import br.unb.cic.soot.graph.*;
 import br.unb.cic.soot.svfa.jimple.JSVFA;
 import scala.collection.JavaConverters;
@@ -18,17 +18,23 @@ import java.util.*;
 public abstract class SVFAAnalysis extends JSVFA {
 
     private String cp;
-
-    private AbstractMergeConflictDefinition definition;
+    private StatementsUtil statementsUtils;
 
     /**
      * SVFAAnalysis constructor
-     * @param classPath a classpath to the software under analysis
-     * @param definition a definition with the sources and sinks unities
+     *
+     * @param classPath   a classpath to the software under analysis
+     * @param definition  a definition with the sources and sinks unities
+     * @param entrypoints the list of entry points for the analysis
      */
-    public SVFAAnalysis(String classPath, AbstractMergeConflictDefinition definition) {
+
+    public SVFAAnalysis(String classPath, AbstractMergeConflictDefinition definition, List<String> entrypoints) {
         this.cp = classPath;
-        this.definition = definition;
+        this.statementsUtils = new StatementsUtil(definition, entrypoints);
+    }
+
+    public SVFAAnalysis(String classPath, AbstractMergeConflictDefinition definition) {
+        this(classPath, definition, new ArrayList<>());
     }
 
     @Override
@@ -59,52 +65,38 @@ public abstract class SVFAAnalysis extends JSVFA {
 
     @Override
     public final scala.collection.immutable.List<String> applicationClassPath() {
-        String[] array = cp.split(File.pathSeparator);
+        String[] array = this.cp.split(File.pathSeparator);
         return JavaConverters.asScalaBuffer(Arrays.asList(array)).toList();
     }
 
     @Override
     public final scala.collection.immutable.List<SootMethod> getEntryPoints() {
-        definition.loadSourceStatements();
-        definition.loadSinkStatements();
-        return JavaConverters.asScalaBuffer(
-            new ArrayList<>(
-                definition.getEntryMethods()
-            )        
-        ).toList();
+        return this.statementsUtils.getEntryPoints();
     }
+
 
     @Override
     public final NodeType analyze(Unit unit) {
-        if(isSource(unit)) {
+        if (isSource(unit)) {
             return SourceNode.instance();
-        }
-        else if(isSink(unit)) {
+        } else if (isSink(unit)) {
             return SinkNode.instance();
         }
         return SimpleNode.instance();
     }
 
     protected boolean isSource(Unit unit) {
-        return getSourceStatements()
+        return this.statementsUtils.getDefinition().getSourceStatements()
                 .stream()
                 .map(stmt -> stmt.getUnit())
                 .anyMatch(u -> u.equals(unit));
     }
 
     protected boolean isSink(Unit unit) {
-        return getSinkStatements()
+        return this.statementsUtils.getDefinition().getSinkStatements()
                 .stream()
                 .map(stmt -> stmt.getUnit())
                 .anyMatch(u -> u.equals(unit));
-    }
-
-    protected List<Statement> getSourceStatements() {
-        return definition.getSourceStatements();
-    }
-
-    protected List<Statement> getSinkStatements() {
-        return definition.getSinkStatements();
     }
 
     @Override

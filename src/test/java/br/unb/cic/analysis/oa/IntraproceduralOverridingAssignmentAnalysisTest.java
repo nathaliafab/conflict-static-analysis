@@ -11,8 +11,6 @@ import soot.PackManager;
 import soot.Transform;
 
 import java.io.FileWriter;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 
 public class IntraproceduralOverridingAssignmentAnalysisTest {
@@ -22,9 +20,7 @@ public class IntraproceduralOverridingAssignmentAnalysisTest {
     private void configureTest(OverrideAssignment analysis) {
         G.reset();
 
-        List<String> testClasses = Collections.singletonList("target/test-classes/");
-
-        SootWrapper.configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis(testClasses);
+        SootWrapper.configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis("target/test-classes/");
 
         analysis.configureEntryPoints();
 
@@ -70,7 +66,7 @@ public class IntraproceduralOverridingAssignmentAnalysisTest {
     public void arraysClassFieldConflictSample() {
         String sampleClassPath = "br.unb.cic.analysis.samples.oa.OverridingAssignmentArraysClassFieldSample";
         AbstractMergeConflictDefinition definition = DefinitionFactory
-                .definition(sampleClassPath, new int[]{7}, new int[]{9});
+                .definition(sampleClassPath, new int[]{8}, new int[]{10});
         OverrideAssignment analysis = new OverrideAssignment(definition, depthLimit, false);
         configureTest(analysis);
         Assert.assertEquals(1, analysis.getConflicts().size());

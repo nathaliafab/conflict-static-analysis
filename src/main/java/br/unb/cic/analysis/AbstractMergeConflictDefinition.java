@@ -8,11 +8,7 @@ import soot.jimple.IdentityStmt;
 import soot.jimple.InvokeStmt;
 import soot.jimple.Stmt;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.*;
 
 /**
  * This abstract class works as a contract. Whenever we
@@ -334,6 +330,44 @@ public abstract class AbstractMergeConflictDefinition {
 
     public Set<SootMethod> getEntryMethods() {
         return entryMethods;
+    }
+
+    /**
+     * Configures the entry points for the application based on the provided entry method names and statements.
+     *
+     * @param entryMethodNames a list of method names to be considered as entry points
+     * @param allStatements    a list of all statements containing SootClass objects
+     * @return a set of SootMethods representing the entry points
+     */
+    public Set<SootMethod> configureEntryPoints(List<String> entryMethodNames, List<Statement> allStatements) throws NoSuchMethodException {
+        Set<SootMethod> entryPoints = new HashSet<>();
+
+        for (Statement statement : allStatements) {
+            SootClass sootClass = statement.getSootClass();
+            addMethodsToEntryPoints(entryPoints, sootClass, entryMethodNames);
+        }
+
+        return entryPoints;
+    }
+
+    /**
+     * Adds methods to the entry points set based on the provided method names and SootClass.
+     *
+     * @param entryPoints a set to which the methods will be added
+     * @param sootClass   the SootClass containing the methods
+     * @param methodNames a list of method names to be added as entry points
+     */
+    private void addMethodsToEntryPoints(Set<SootMethod> entryPoints, SootClass sootClass, List<String> methodNames) throws NoSuchMethodException {
+        for (String methodName : methodNames) {
+            try {
+                SootMethod sootMethod = sootClass.getMethod(methodName);
+                if (!entryPoints.contains(sootMethod)) {
+                    entryPoints.add(sootMethod);
+                }
+            } catch (RuntimeException e) {
+                throw new NoSuchMethodException("Method not found: " + methodName + " in class " + sootClass.getName());
+            }
+        }
     }
 
 }

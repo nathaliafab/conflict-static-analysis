@@ -4,11 +4,10 @@ import soot.PackManager;
 import soot.Scene;
 import soot.jimple.spark.SparkTransformer;
 import soot.jimple.toolkits.callgraph.CHATransformer;
+import soot.options.Options;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.io.File;
+import java.util.*;
 
 /**
  * A fluent API for executing the soot framework
@@ -46,20 +45,32 @@ public class SootWrapper {
         return stringList;
     }
 
-    public static void configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis(List<String> classpath) {
-        soot.options.Options.v().set_no_bodies_for_excluded(true);
-        soot.options.Options.v().set_allow_phantom_refs(true);
-        soot.options.Options.v().set_output_format(soot.options.Options.output_format_jimple);
-        soot.options.Options.v().set_whole_program(true);
-        soot.options.Options.v().set_process_dir(classpath);
-        soot.options.Options.v().set_full_resolver(true);
-        soot.options.Options.v().set_keep_line_number(true);
-        soot.options.Options.v().set_prepend_classpath(false);
-        soot.options.Options.v().set_include(getIncludeList());
+    public static void configureSootOptionsToRunInterproceduralOverrideAssignmentAnalysis(String classpath) {
+        List<String> classes = Collections.singletonList(classpath);
+
+        Options.v().set_no_bodies_for_excluded(true);
+        Options.v().set_allow_phantom_refs(true);
+        Options.v().set_output_format(soot.options.Options.output_format_jimple);
+        Options.v().set_whole_program(true);
+        Options.v().set_process_dir(classes);
+        Options.v().set_full_resolver(true);
+        Options.v().set_keep_line_number(true);
+        Options.v().set_include(getIncludeList());
+
+        // JAVA 8
+        if (getJavaVersion() < 9) {
+            Options.v().set_prepend_classpath(true);
+            Options.v().set_soot_classpath(classpath + File.pathSeparator + pathToJCE() + File.pathSeparator + pathToRT());
+        }
+        // JAVA VERSION 9 && IS A CLASSPATH PROJECT
+        else if (getJavaVersion() >= 9) {
+            Options.v().set_soot_classpath(classpath);
+        }
+
         //Options.v().setPhaseOption("cg.spark", "on");
         //Options.v().setPhaseOption("cg.spark", "verbose:true");
-        soot.options.Options.v().setPhaseOption("cg.spark", "enabled:true");
-        soot.options.Options.v().setPhaseOption("jb", "use-original-names:true");
+        Options.v().setPhaseOption("cg.spark", "enabled:true");
+        Options.v().setPhaseOption("jb", "use-original-names:true");
 
         Scene.v().loadNecessaryClasses();
 
@@ -131,7 +142,7 @@ public class SootWrapper {
         }
 
         public SootWrapper build() {
-            if(classes.isEmpty() || classPath.isEmpty()) {
+            if (classes.isEmpty() || classPath.isEmpty()) {
                 throw new RuntimeException("You should only call the build method " +
                         "after setting the class path and adding at least " +
                         "one class.");
@@ -139,4 +150,38 @@ public class SootWrapper {
             return new SootWrapper(classPath, classes);
         }
     }
+
+    public static String pathToJCE() {
+        String javaHome = System.getProperty("java.home");
+        File jreDir = new File(javaHome, "jre");
+        if (jreDir.exists() && jreDir.isDirectory()) {
+            return jreDir.getPath() + File.separator + "lib" + File.separator + "jce.jar";
+        } else {
+            return javaHome + File.separator + "lib" + File.separator + "jce.jar";
+        }
+    }
+
+    public static String pathToRT() {
+        String javaHome = System.getProperty("java.home");
+        File jreDir = new File(javaHome, "jre");
+        if (jreDir.exists() && jreDir.isDirectory()) {
+            return jreDir.getPath() + File.separator + "lib" + File.separator + "rt.jar";
+        } else {
+            return javaHome + File.separator + "lib" + File.separator + "rt.jar";
+        }
+    }
+
+    public static int getJavaVersion() {
+        String version = System.getProperty("java.version");
+        if (version.startsWith("1.")) {
+            version = version.substring(2, 3);
+        } else {
+            int dot = version.indexOf(".");
+            if (dot != -1) {
+                version = version.substring(0, dot);
+            }
+        }
+        return Integer.parseInt(version);
+    }
+
 }

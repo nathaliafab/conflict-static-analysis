@@ -2,10 +2,12 @@ package br.unb.cic.analysis.oa;
 
 import br.unb.cic.analysis.AbstractAnalysis;
 import br.unb.cic.analysis.AbstractMergeConflictDefinition;
+import br.unb.cic.analysis.StatementsUtil;
 import br.unb.cic.analysis.model.Conflict;
 import br.unb.cic.analysis.model.OAConflictReport;
 import br.unb.cic.analysis.model.Statement;
 import br.unb.cic.analysis.model.TraversedLine;
+import scala.collection.JavaConverters;
 import soot.*;
 import soot.jimple.*;
 import soot.jimple.internal.JAssignStmt;
@@ -20,33 +22,26 @@ import java.util.stream.Collectors;
 public class OverrideAssignment extends SceneTransformer implements AbstractAnalysis {
     private int depthLimit;
     private final Boolean interprocedural;
-    private final AbstractMergeConflictDefinition definition;
     private OAConflictReport oaConflictReport;
     private TraversedMethodsWrapper<SootMethod> traversedMethodsWrapper;
     private List<TraversedLine> stacktraceList;
 
-    public OverrideAssignment(AbstractMergeConflictDefinition definition) {
-        this.definition = definition;
-        this.depthLimit = 5;
-        this.interprocedural = true;
+    private StatementsUtil statementsUtils;
 
-        initDefaultFields();
-    }
-
-    public OverrideAssignment(AbstractMergeConflictDefinition definition, int depthLimit) {
-        this.definition = definition;
+    public OverrideAssignment(AbstractMergeConflictDefinition definition, int depthLimit, Boolean interprocedural, List<String> entrypoints) {
         this.depthLimit = depthLimit;
-        this.interprocedural = true;
+        this.interprocedural = interprocedural;
+        this.statementsUtils = new StatementsUtil(definition, entrypoints);
 
         initDefaultFields();
     }
 
     public OverrideAssignment(AbstractMergeConflictDefinition definition, int depthLimit, Boolean interprocedural) {
-        this.definition = definition;
-        this.depthLimit = depthLimit;
-        this.interprocedural = interprocedural;
+        this(definition, depthLimit, interprocedural, new ArrayList<>());
+    }
 
-        initDefaultFields();
+    public OverrideAssignment(AbstractMergeConflictDefinition definition) {
+        this(definition, 5, true);
     }
 
     private void initDefaultFields() {
@@ -79,32 +74,10 @@ public class OverrideAssignment extends SceneTransformer implements AbstractAnal
     }
 
     public void configureEntryPoints() {
-        List<SootMethod> entryPoints = new ArrayList<>();
+        scala.collection.immutable.List<SootMethod> scalaList = this.statementsUtils.getEntryPoints();
+        List<SootMethod> entryPoints = new ArrayList<>(JavaConverters.seqAsJavaList(scalaList));
 
-        definition.loadSourceStatements();
-        definition.loadSinkStatements();
-
-        SootMethod sm = getTraversedMethod();
-
-        if (sm != null) {
-            entryPoints.add(sm);
-        } else {
-            definition.getSourceStatements().forEach(s -> {
-                if (!entryPoints.contains(s.getSootMethod())) {
-                    entryPoints.add(s.getSootMethod());
-                }
-            });
-        }
         Scene.v().setEntryPoints(entryPoints);
-    }
-
-    private SootMethod getTraversedMethod() {
-        try {
-            SootClass sootClass = definition.getSourceStatements().get(0).getSootClass();
-            return sootClass.getMethodByName("callRealisticRun");
-        } catch (RuntimeException e) {
-            return null;
-        }
     }
 
     /**
@@ -125,16 +98,16 @@ public class OverrideAssignment extends SceneTransformer implements AbstractAnal
         this.traversedMethodsWrapper.add(sootMethod);
 
         //System.out.println(sootMethod + " - " + this.traversedMethodsWrapper.size());
-        Body body = definition.retrieveActiveBodySafely(sootMethod);
+        Body body = this.statementsUtils.getDefinition().retrieveActiveBodySafely(sootMethod);
 
         if (body != null) {
             for (Unit unit : body.getUnits()) {
                 TraversedLine traversedLine = new TraversedLine(sootMethod, unit.getJavaSourceStartLineNumber());
                 Statement stmt = getStatementAssociatedWithUnit(sootMethod, unit, flowChangeTag);
 
-                stacktraceList.add(traversedLine);
+                this.stacktraceList.add(traversedLine);
                 in = runAnalysis(in, stmt);
-                stacktraceList.remove(traversedLine);
+                this.stacktraceList.remove(traversedLine);
             }
         }
 
@@ -438,17 +411,17 @@ public class OverrideAssignment extends SceneTransformer implements AbstractAnal
 
     private Statement getStatementAssociatedWithUnit(SootMethod sootMethod, Unit u, Statement.Type flowChangeTag) {
         if (isLeftAndRightUnit(u) || isInLeftAndRightStatementFlow(flowChangeTag) || isBothUnitOrBothStatementFlow(u, flowChangeTag)) {
-            return definition.createStatement(sootMethod, u, Statement.Type.SOURCE_SINK);
+            return this.statementsUtils.getDefinition().createStatement(sootMethod, u, Statement.Type.SOURCE_SINK);
         } else if (isLeftUnit(u)) {
             return findLeftStatement(u);
         } else if (isRightUnit(u)) {
             return findRightStatement(u);
         } else if (isInLeftStatementFlow(flowChangeTag)) {
-            return definition.createStatement(sootMethod, u, flowChangeTag);
+            return this.statementsUtils.getDefinition().createStatement(sootMethod, u, flowChangeTag);
         } else if (isInRightStatementFlow(flowChangeTag)) {
-            return definition.createStatement(sootMethod, u, flowChangeTag);
+            return this.statementsUtils.getDefinition().createStatement(sootMethod, u, flowChangeTag);
         }
-        return definition.createStatement(sootMethod, u, Statement.Type.IN_BETWEEN);
+        return this.statementsUtils.getDefinition().createStatement(sootMethod, u, Statement.Type.IN_BETWEEN);
     }
 
     private boolean isBothUnitOrBothStatementFlow(Unit u, Statement.Type flowChangeTag) {
@@ -456,11 +429,11 @@ public class OverrideAssignment extends SceneTransformer implements AbstractAnal
     }
 
     private boolean isLeftUnit(Unit u) {
-        return definition.getSourceStatements().stream().map(Statement::getUnit).collect(Collectors.toList()).contains(u);
+        return this.statementsUtils.getDefinition().getSourceStatements().stream().map(Statement::getUnit).collect(Collectors.toList()).contains(u);
     }
 
     private boolean isRightUnit(Unit u) {
-        return definition.getSinkStatements().stream().map(Statement::getUnit).collect(Collectors.toList()).contains(u);
+        return this.statementsUtils.getDefinition().getSinkStatements().stream().map(Statement::getUnit).collect(Collectors.toList()).contains(u);
     }
 
     private boolean isInRightStatementFlow(Statement.Type flowChangeTag) {
@@ -480,11 +453,11 @@ public class OverrideAssignment extends SceneTransformer implements AbstractAnal
     }
 
     private Statement findRightStatement(Unit u) {
-        return definition.getSinkStatements().stream().filter(s -> s.getUnit().equals(u)).findFirst().get();
+        return this.statementsUtils.getDefinition().getSinkStatements().stream().filter(s -> s.getUnit().equals(u)).findFirst().get();
     }
 
     private Statement findLeftStatement(Unit u) {
-        return definition.getSourceStatements().stream().filter(s -> s.getUnit().equals(u)).findFirst().get();
+        return this.statementsUtils.getDefinition().getSourceStatements().stream().filter(s -> s.getUnit().equals(u)).findFirst().get();
     }
 
     public int getVisitedMethodsCount() {
@@ -492,7 +465,7 @@ public class OverrideAssignment extends SceneTransformer implements AbstractAnal
     }
 
     public int getDepthLimit() {
-        return depthLimit;
+        return this.depthLimit;
     }
 
     public void setDepthLimit(int depthLimit) {
