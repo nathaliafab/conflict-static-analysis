@@ -21,6 +21,12 @@
 
 	<dependencies>
 		<dependency>
+			<groupId>org.soot-oss</groupId>
+			<artifactId>soot</artifactId>
+			<version>4.3.0</version>
+		</dependency>
+
+		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 			<version>32.0.0-jre</version>
@@ -52,11 +58,6 @@
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.13.1</version>
-		</dependency>
-		<dependency>
-			<groupId>ca.mcgill.sable</groupId>
-			<artifactId>soot</artifactId>
-			<version>3.3.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.jgit</groupId>

@@ -64,7 +64,7 @@ public class SootWrapper {
         }
         // JAVA VERSION 9 && IS A CLASSPATH PROJECT
         else if (getJavaVersion() >= 9) {
-            Options.v().set_soot_classpath(classpath);
+            Options.v().set_soot_classpath("VIRTUAL_FS_FOR_JDK" + File.pathSeparator + classpath);
         }
 
         //Options.v().setPhaseOption("cg.spark", "on");
