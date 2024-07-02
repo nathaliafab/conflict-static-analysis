@@ -257,6 +257,13 @@ public class Main {
                                         .stream()
                                         .map(Conflict::toString)
                                         .collect(Collectors.toList()));
+
+                        JSONconflicts.addAll(
+                                analysis
+                                        .getConflicts()
+                                        .stream()
+                                        .map(Conflict::toJSON)
+                                        .collect(Collectors.toList()));
                     }
                 })
         );
@@ -299,6 +306,7 @@ public class Main {
                 .execute();
         if (analysis != null) {
             conflicts.addAll(analysis.getConflicts().stream().map(c -> c.toString()).collect(Collectors.toList()));
+            JSONconflicts.addAll(analysis.getConflicts().stream().map(c -> c.toJSON()).collect(Collectors.toList()));
         }
     }
 
@@ -357,6 +365,7 @@ public class Main {
                 .execute();
 
         conflicts.addAll(analysis.getConflicts().stream().map(c -> c.toString()).collect(Collectors.toList()));
+        JSONconflicts.addAll(analysis.getConflicts().stream().map(c -> c.toJSON()).collect(Collectors.toList()));
     }
 
     private void runPDGAnalysis(String classpath, Boolean omitExceptingUnitEdges) {
@@ -414,6 +423,8 @@ public class Main {
                 .stream()
                 .map(p -> formatConflict(p.toString()))
                 .collect(Collectors.toList()));
+
+        JSONconflicts.addAll(JavaConverters.asJavaCollection(analysis.reportConflictsSVGJSON()));
 
         saveExecutionTime("Time to perform DFP "+type_analysis);
         System.out.println("Depth limit: "+analysis.getDepthLimit());
@@ -484,6 +495,8 @@ public class Main {
                 .stream()
                 .map(p -> formatConflict(p.toString()))
                 .collect(Collectors.toList()));
+
+        JSONconflicts.addAll(JavaConverters.asJavaCollection(analysis.reportConflictsSVGJSON()));
 
         saveExecutionTime("Time to perform DF "+type_analysis);
 
