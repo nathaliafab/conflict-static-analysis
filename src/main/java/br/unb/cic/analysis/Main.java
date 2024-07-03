@@ -48,6 +48,7 @@ public class Main {
     private AbstractMergeConflictDefinition definition;
     private Set<String> targetClasses;
     private List<String> conflicts = new ArrayList<>();
+    private List<String> JSONconflicts = new ArrayList<>();
     private ReachDefinitionAnalysis analysis;
     public static Stopwatch stopwatch;
 
@@ -120,6 +121,22 @@ public class Main {
         });
         fw.close();
         System.out.println(" Results exported to " + out);
+
+        final String outJSON = "out.json";
+        final FileWriter fwJSON = new FileWriter(outJSON);
+        fwJSON.write("[\n");
+        JSONconflicts.forEach(c -> {
+            try {
+                fwJSON.write(c);
+                fwJSON.write(JSONconflicts.indexOf(c) == JSONconflicts.size() - 1 ? "\n" : ",\n");
+            } catch (Exception e) {
+                System.out.println("error exporting the results " + e.getMessage());
+            }
+        });
+        fwJSON.write("\n]");
+        fwJSON.close();
+        System.out.println(" JSON Results exported to " + outJSON);
+
         System.out.println("----------------------------");
     }
 
@@ -240,6 +257,13 @@ public class Main {
                                         .stream()
                                         .map(Conflict::toString)
                                         .collect(Collectors.toList()));
+
+                        JSONconflicts.addAll(
+                                analysis
+                                        .getConflicts()
+                                        .stream()
+                                        .map(Conflict::toJSON)
+                                        .collect(Collectors.toList()));
                     }
                 })
         );
@@ -282,6 +306,7 @@ public class Main {
                 .execute();
         if (analysis != null) {
             conflicts.addAll(analysis.getConflicts().stream().map(c -> c.toString()).collect(Collectors.toList()));
+            JSONconflicts.addAll(analysis.getConflicts().stream().map(c -> c.toJSON()).collect(Collectors.toList()));
         }
     }
 
@@ -307,6 +332,7 @@ public class Main {
         SootWrapper.applyPackages();
 
         conflicts.addAll(overrideAssignment.getConflicts().stream().map(c -> c.toString()).collect(Collectors.toList()));
+        JSONconflicts.addAll(overrideAssignment.getConflicts().stream().map(c -> c.toJSON()).collect(Collectors.toList()));
         saveExecutionTime("Time to perform OA " + (interprocedural ? "Inter" : "Intra"));
 
         int visitedMethods = overrideAssignment.getVisitedMethodsCount();
@@ -339,6 +365,7 @@ public class Main {
                 .execute();
 
         conflicts.addAll(analysis.getConflicts().stream().map(c -> c.toString()).collect(Collectors.toList()));
+        JSONconflicts.addAll(analysis.getConflicts().stream().map(c -> c.toJSON()).collect(Collectors.toList()));
     }
 
     private void runPDGAnalysis(String classpath, Boolean omitExceptingUnitEdges) {
@@ -396,6 +423,8 @@ public class Main {
                 .stream()
                 .map(p -> formatConflict(p.toString()))
                 .collect(Collectors.toList()));
+
+        JSONconflicts.addAll(JavaConverters.asJavaCollection(analysis.reportConflictsSVGJSON()));
 
         saveExecutionTime("Time to perform DFP "+type_analysis);
         System.out.println("Depth limit: "+analysis.getDepthLimit());
@@ -466,6 +495,8 @@ public class Main {
                 .stream()
                 .map(p -> formatConflict(p.toString()))
                 .collect(Collectors.toList()));
+
+        JSONconflicts.addAll(JavaConverters.asJavaCollection(analysis.reportConflictsSVGJSON()));
 
         saveExecutionTime("Time to perform DF "+type_analysis);
 
